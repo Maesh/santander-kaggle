@@ -11,8 +11,10 @@ import theano
 
 from keras.models import Sequential
 from keras.layers.core import Dense, Dropout, Activation
-from sklearn import cross_validation, preprocessing, metrics
 from keras.layers.advanced_activations import PReLU
+from keras.optimizers import SGD
+
+from sklearn import cross_validation, preprocessing, metrics
 
 # Get the data in, skip header row
 train = np.genfromtxt('train.csv',delimiter=',',skip_header=1)
@@ -32,7 +34,7 @@ X_train, X_test, y_train, y_test = \
 
 model = Sequential()
 # Trying various NN configurations, see what sticks
-model.add(Dense(64, input_dim=X.shape[1], init='he_normal'))#, W_regularizer=l2(0.1)))
+model.add(Dense(64, input_dim=X_train.shape[1], init='he_normal'))#, W_regularizer=l2(0.1)))
 model.add(PReLU()) # Prelu works well I have found in the past
 model.add(Dropout(0.5)) # Reduce overfitting
 model.add(Dense(128, init='he_normal',input_dim=64))
@@ -41,14 +43,14 @@ model.add(Dropout(0.5))
 model.add(Dense(64, init='he_normal',input_dim=128))
 model.add(PReLU())
 model.add(Dropout(0.5))
-model.add(Dense(2, init='he_normal',input_dim=64))
-model.add(Activation('softmax')) # classification softmax, regression tanh or sigmoid
+model.add(Dense(1, init='he_normal',input_dim=64))
+model.add(Activation('tanh')) # classification softmax, regression tanh or sigmoid
 
 # Stochastic gradient descent to train
 sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
 
 # Use categorical cross_entropy for now for classification
-model.compile(loss='categorical_crossentropy', optimizer='adadelta')
+model.compile(loss='mean_squared_error', optimizer=sgd)
 
 # Fit the model. Training on small number of epochs to start with.
 f = model.fit(X_train, y_train, nb_epoch=25, shuffle=True,
@@ -57,7 +59,10 @@ f = model.fit(X_train, y_train, nb_epoch=25, shuffle=True,
 
 print("Making predictions on validation set")
 # Make predictions on validation data
-predictions = clf2.predict(X_test, batch_size=100, verbose=1)
+predictions = model.predict(X_test, batch_size=100, verbose=1)
 
 # Compute and print accuracy to screen
-print("Classifier Accuracy = %d"%(metrics.accuracy_score(y_test,predictions)))
+print("Minimum prediction is = %.2f, max = %.2f\n"%\
+	(np.min(predictions),np.max(predictions)))
+print("Classifier Accuracy = %d"%\
+	(metrics.classification_report(y_test,np.round(predictions))))
