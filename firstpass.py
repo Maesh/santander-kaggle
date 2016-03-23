@@ -1,11 +1,15 @@
 """
-First pass at the Santander competition
+First pass at the Santander competition.
+
+Note: This NN doesn't do better than the all zeroes benchmark as it 
+rarely predicts 1. Only 6 on the validation set and none on test set
 
 By Ryan Gooch
 March, 2016
 """
 
 import numpy as np
+import pandas as pd
 import keras
 import theano
 
@@ -16,23 +20,30 @@ from keras.optimizers import SGD
 
 from sklearn import cross_validation, preprocessing, metrics
 
-# also import getdata function
-from dataio import getdata
+# also import data import and export functions
+from dataio import getdata, writesub
 
 # Get the data in, skip header row
-train = np.genfromtxt('train.csv',delimiter=',',skip_header=1)
-# df_train, df_test = getdata()
+# train = np.genfromtxt('train.csv',delimiter=',',skip_header=1)
+df_train, df_test = getdata()
 
-y = train[:,-1]
+# Get target values
+y = df_train['TARGET'].values
+
+X_train = df_train.drop(['ID','TARGET'], axis=1).values
 
 # Standardize, ignore numerical warning for now
-X = preprocessing.scale(train[:,:-1])
+X = preprocessing.scale(X_train)
 
 # Random state for repeatability, split into training and validation sets
 rs = 19683
-X_train, X_test, y_train, y_test = \
+X_train, X_val, y_train, y_val = \
 		cross_validation.train_test_split(X, y, \
 			test_size=0.25, random_state=rs)
+
+# one hot encode with pandas. A little messy but easy
+y_train = pd.get_dummies(pd.Series(y_train)).values
+y_val = pd.get_dummies(pd.Series(y_val)).values
 
 model = Sequential()
 # Trying various NN configurations, see what sticks
@@ -45,14 +56,14 @@ model.add(Dropout(0.5))
 model.add(Dense(64, init='he_normal',input_dim=128))
 model.add(PReLU())
 model.add(Dropout(0.5))
-model.add(Dense(1, init='he_normal',input_dim=64))
-model.add(Activation('tanh')) # classification softmax, regression tanh or sigmoid
+model.add(Dense(2, init='he_normal',input_dim=64))
+model.add(Activation('softmax')) # classification softmax, regression tanh or sigmoid
 
 # Stochastic gradient descent to train
 sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
 
-# Use categorical cross_entropy for now for classification
-model.compile(loss='mean_squared_error', optimizer=sgd)
+# Use binary cross entropy for now for classification, adam as suggested
+model.compile(loss='binary_crossentropy', optimizer='adadelta')
 
 # Fit the model. Training on small number of epochs to start with.
 f = model.fit(X_train, y_train, nb_epoch=100, shuffle=True,
@@ -61,15 +72,30 @@ f = model.fit(X_train, y_train, nb_epoch=100, shuffle=True,
 
 print("Making predictions on validation set")
 # Make predictions on validation data
-predictions = model.predict(X_test, batch_size=100, verbose=0)
+valid_preds = model.predict_proba(X_val, verbose=0)
 
-# Compute and print accuracy to screen
-print("Minimum prediction is = %.6f, max = %.6f\n"%\
-	(np.min(predictions),np.max(predictions)))
+# Take max value in preds rows as classification
+pred = np.zeros((len(valid_preds)))
+yint = np.zeros((len(valid_preds)))
+for row in np.arange(0,len(valid_preds)) :
+	pred[row] = np.argmax(valid_preds[row])
+	yint[row] = np.argmax(y_val[row])
 
-valid_preds = model.predict_proba(X_test, verbose=0)
-roc = metrics.roc_auc_score(y_test, valid_preds)
+roc = metrics.roc_auc_score(yint, pred)
 print("ROC:", roc)
 
-print("Classifier Accuracy = %d"%\
-	(metrics.classification_report(y_test,np.round(predictions))))
+print("Making predictions on test set")
+
+id_test = df_test['ID']
+X_test = df_test.drop(['ID'], axis=1).values
+
+# make predictions using model, on test set
+test_preds = model.predict_proba(X_test)
+
+# Take max value in preds rows as classification
+pred = np.zeros((len(test_preds)))
+for row in np.arange(0,len(test_preds)) :
+	pred[row] = np.max(test_preds[row])
+
+# Write to file, change file name as needed
+writesub(id_test, pred, sub = "NN.64.128.64.csv")

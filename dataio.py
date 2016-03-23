@@ -40,8 +40,6 @@ def getdata() :
 
 	return df_train, df_test
 
-# y_train = df_train['TARGET'].values
-# X_train = df_train.drop(['ID','TARGET'], axis=1).values
-
-# id_test = df_test['ID']
-# X_test = df_test.drop(['ID'], axis=1).values
+def writesub(id_test, y_pred, sub = "submission.csv") :
+	submission = pd.DataFrame({"ID":id_test, "TARGET":y_pred})
+	submission.to_csv(sub, index=False)
