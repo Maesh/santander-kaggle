@@ -53,8 +53,8 @@ sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
 model.compile(loss='mean_squared_error', optimizer=sgd)
 
 # Fit the model. Training on small number of epochs to start with.
-f = model.fit(X_train, y_train, nb_epoch=25, shuffle=True,
-	batch_size=1000, validation_split=0.15,
+f = model.fit(X_train, y_train, nb_epoch=100, shuffle=True,
+	batch_size=16, validation_split=0.15,
 	show_accuracy=True, verbose=1)
 
 print("Making predictions on validation set")
@@ -62,7 +62,12 @@ print("Making predictions on validation set")
 predictions = model.predict(X_test, batch_size=100, verbose=1)
 
 # Compute and print accuracy to screen
-print("Minimum prediction is = %.2f, max = %.2f\n"%\
+print("Minimum prediction is = %.6f, max = %.6f\n"%\
 	(np.min(predictions),np.max(predictions)))
+
+valid_preds = model.predict_proba(X_test, verbose=0)
+roc = metrics.roc_auc_score(y_test, valid_preds)
+print("ROC:", roc)
+
 print("Classifier Accuracy = %d"%\
 	(metrics.classification_report(y_test,np.round(predictions))))
