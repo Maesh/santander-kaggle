@@ -16,15 +16,17 @@ from keras.optimizers import SGD
 
 from sklearn import cross_validation, preprocessing, metrics
 
+# also import getdata function
+from dataio import getdata
+
 # Get the data in, skip header row
 train = np.genfromtxt('train.csv',delimiter=',',skip_header=1)
+# df_train, df_test = getdata()
 
-# Normalize since mostly zeroes, may have difficulty centering
-train_norm = preprocessing.normalize(train)
+y = train[:,-1]
 
-# Split into data and target
-X = train_norm[:,:-1]
-y = train_norm[:,-1]
+# Standardize, ignore numerical warning for now
+X = preprocessing.scale(train[:,:-1])
 
 # Random state for repeatability, split into training and validation sets
 rs = 19683
@@ -54,12 +56,12 @@ model.compile(loss='mean_squared_error', optimizer=sgd)
 
 # Fit the model. Training on small number of epochs to start with.
 f = model.fit(X_train, y_train, nb_epoch=100, shuffle=True,
-	batch_size=16, validation_split=0.15,
+	batch_size=128, validation_split=0.15,
 	show_accuracy=True, verbose=1)
 
 print("Making predictions on validation set")
 # Make predictions on validation data
-predictions = model.predict(X_test, batch_size=100, verbose=1)
+predictions = model.predict(X_test, batch_size=100, verbose=0)
 
 # Compute and print accuracy to screen
 print("Minimum prediction is = %.6f, max = %.6f\n"%\
