@@ -4,6 +4,7 @@ from sklearn import cross_validation
 from sklearn import preprocessing
 from math import log
 from dataio import getdata, writesub
+from helpfuncs import spliteven
 import random
 import pandas as pd
 import numpy as np
@@ -64,8 +65,6 @@ class RUSBoost:
         else:
             return 0
         
-            
-        
     def learning(self):
         
         k = 0
@@ -74,6 +73,8 @@ class RUSBoost:
             sampled = self.undersampling()
             sampled_X = []
             sampled_Y = []
+            # from paper, weight is 1/m, where m is number of minority
+            # class samples
             sampled_weight = []
             
             for s in sampled:
