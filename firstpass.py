@@ -33,7 +33,7 @@ y = df_train['TARGET'].values
 X_train = df_train.drop(['ID','TARGET'], axis=1).values
 
 # Standardize, ignore numerical warning for now
-X = preprocessing.scale(X_train)
+# X = preprocessing.scale(X_train)
 
 # Random state for repeatability, split into training and validation sets
 rs = 19683
