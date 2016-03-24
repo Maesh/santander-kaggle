@@ -226,6 +226,8 @@ if __name__ == '__main__':
     print('Training the model\n')
     rus.learning()
     print('Classifying validation set\n')
-    pred = rus.classify(X_val)
+    pred = []
+    for i in range(len(X_val)) :
+        pred.append(rus.classify(X_val[i]))
     
     roc = metrics.roc_auc_score(y_val, pred)
