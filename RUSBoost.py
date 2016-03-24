@@ -7,6 +7,7 @@ from dataio import getdata, writesub
 import random
 import pandas as pd
 import numpy as np
+import warnings 
 
 """
 This implementation of RUSBoost was originally written by github user
@@ -140,6 +141,9 @@ class RUSBoost:
     
 if __name__ == '__main__':
     
+    # Functionality deprecated in 0.19, just ignore for now
+    warnings.filterwarnings('ignore')
+
     ''' 
     Choose a base classifier, e.g. SVM, Decision Tree
     '''
@@ -198,6 +202,7 @@ if __name__ == '__main__':
     #             sData[int(pair[0])-1] = pair[1]
     #     supervisedData.append(sData)
 
+    print('Getting the data\n')
     # Get the data in, skip header row
     # train = np.genfromtxt('train.csv',delimiter=',',skip_header=1)
     df_train, df_test = getdata()
@@ -217,11 +222,10 @@ if __name__ == '__main__':
             test_size=0.25, random_state=rs)
     
     rus = RUSBoost(X_train, y_train, base_classifier, N, rate)
+    
+    print('Training the model\n')
     rus.learning()
-    classifiedLabel = rus.classify(testData)
-    print "Test data:",
-    for t in testData:
-        print t,
-    print
-    print "Classified to :" + str(classifiedLabel)
-    print "True label is :" + str(testLabel[0])
+    print('Classifying validation set\n')
+    pred = rus.classify(X_val)
+    
+    roc = metrics.roc_auc_score(y_val, pred)
