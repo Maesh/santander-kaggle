@@ -25,7 +25,9 @@ from dataio import getdata, writesub
 
 # Get the data in, skip header row
 # train = np.genfromtxt('train.csv',delimiter=',',skip_header=1)
-df_train, df_test = getdata()
+trainpath = '/media/ryan/Charlemagne/kaggle/santander-kaggle/train.csv'
+testpath = '/media/ryan/Charlemagne/kaggle/santander-kaggle/test.csv'
+df_train, df_test = getdata(trrainpath,testpath)
 
 # Get target values
 y = df_train['TARGET'].values
