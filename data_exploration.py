@@ -34,12 +34,17 @@ model = SelectFromModel(lsvc, prefit=True)
 X_new = model.transform(X)
 print(X_new.shape)
 
+X_IDs = df_test['ID']
+X_test = df_test.drop(['ID'],axis=1)
+X_test = model.transform(X_test)
+
 """
 L1-SVM dropped features from 307 to 65. Pretty steep
 """
 
 # Standardize, ignore numerical warning for now
 X = preprocessing.scale(X_new)
+X_test = preprocessing.scale(X_test)
 
 # Random state for repeatability, split into training and validation sets
 rs = 19683
@@ -52,7 +57,7 @@ import xgboost as xgb
 ### load data in do training
 dtrain = xgb.DMatrix(X_train,label=y_train)
 dtest = xgb.DMatrix(X_val,label=y_val)
-param = {'max_depth':4, 'eta':1, 'silent':1, 'objective':'binary:logistic' }
+param = {'max_depth':8, 'eta':1, 'silent':1, 'objective':'binary:logistic' }
 watchlist  = [(dtest,'eval'), (dtrain,'train')]
 num_round = 3
 bst = xgb.train(param, dtrain, num_round, watchlist)
@@ -70,10 +75,38 @@ roc = metrics.roc_auc_score(y_val, ypred1)
 print("ROC, ypred1: ", roc)
 roc = metrics.roc_auc_score(y_val, ypred2)
 print("ROC, ypred2: ", roc)
+roc = metrics.roc_auc_score(y_val, np.mean([ypred1,ypred2],0))
+print("ROC, averaged ypreds: ", roc)
 
 """
-('ROC, ypred1: ', 0.78292686247235677)
-('ROC, ypred2: ', 0.80085763992638526)
+('ROC, ypred1: ', 0.7829)
+('ROC, ypred2: ', 0.8008)
 
 So, this is good. Highly correlated, so just use ypred2 if in ensemble
 """
+
+"""
+('ROC, ypred1: ', 0.7902)
+('ROC, ypred2: ', 0.8103)
+('ROC, ypreds: ', 0.8115) <----> Kaggle Test set ROC: 0.8121, val = consistent
+
+for first 8 trees. Also these two are uncorrelated! Go ahead and make a 
+submission because why not.
+"""
+
+ # Make predictions on test set
+### load data in do training
+dtrain = xgb.DMatrix(X,label=y)
+dtest = xgb.DMatrix(X_test)
+param = {'max_depth':8, 'eta':1, 'silent':1, 'objective':'binary:logistic' }
+watchlist  = [(dtrain,'train')]
+num_round = 3
+bst = xgb.train(param, dtrain, num_round)
+
+print ('start testing prediction from first n trees')
+### predict using first 1 tree
+ypred1 = bst.predict(dtest, ntree_limit=1)
+# by default, we predict using all the trees
+ypred2 = bst.predict(dtest)
+
+writesub(X_IDs, np.mean([ypred1,ypred2],0), sub = "XGB.3round.2ensemble.2016.04.01.csv")
