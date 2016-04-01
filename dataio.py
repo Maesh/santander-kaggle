@@ -18,8 +18,8 @@ def getdata(trainpath = 'train.csv',testpath = 'test.csv') :
 	data. May need to alter this depending on system of use.
 	"""
 	# load data
-	df_train = pd.read_csv('train.csv')
-	df_test = pd.read_csv('test.csv')
+	df_train = pd.read_csv(trainpath)
+	df_test = pd.read_csv(testpath)
 
 	# remove constant columns
 	remove = []
