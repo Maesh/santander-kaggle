@@ -1,10 +1,11 @@
 from sklearn import svm
 from sklearn import tree
 from sklearn import cross_validation
-from sklearn import preprocessing
+from sklearn import preprocessing, metrics
 from math import log
 from dataio import getdata, writesub
-from helpfuncs import spliteven
+import xgboost as xgb
+
 import random
 import pandas as pd
 import numpy as np
@@ -73,7 +74,7 @@ class RUSBoost:
             sampled = self.undersampling()
             sampled_X = []
             sampled_Y = []
-            # from paper, weight is 1/m, where m is number of minority
+            # from paper, weight is 1/m, where m is number of majority
             # class samples
             sampled_weight = []
             
@@ -96,7 +97,7 @@ class RUSBoost:
         
             for i in range(len(self.weight)):
                 if loss == 0:
-                    self.weight[i] = self.weight[i]
+                    self.weight[i] = self.weight[i] #wut
                 elif self.Y[i] == self.clf[k].predict(self.X[i]):
                     self.weight[i] = self.weight[i] * (loss / (1 - loss))
                        
@@ -150,11 +151,14 @@ if __name__ == '__main__':
     '''
     #base_classifier = svm.SVC()
     base_classifier = tree.DecisionTreeClassifier()
+    # base_classifier = xgb.XGBClassifier(missing=np.nan, max_depth=5, 
+    #     n_estimators=25, learning_rate=0.03, nthread=4, 
+    #     subsample=0.95, colsample_bytree=0.85, seed=19683)
 
     '''
     Set the number of base classifiers
     ''' 
-    N = 20
+    N = 100
     
     '''
     Set the rate of minor instances to major instances
@@ -232,3 +236,4 @@ if __name__ == '__main__':
         pred.append(rus.classify(X_val[i]))
     
     roc = metrics.roc_auc_score(y_val, pred)
+    print('ROC: %.4f'%(roc))
