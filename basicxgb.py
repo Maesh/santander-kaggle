@@ -60,7 +60,7 @@ dtest = xgb.DMatrix(X_val,label=y_val)
 param = {'max_depth':8, 'eta':0.5, 'silent':1, 'objective':'binary:logistic',\
 	'eval_metric':'auc'}
 watchlist  = [(dtest,'eval'), (dtrain,'train')]
-num_round = 8
+num_round = 3
 bst = xgb.train(param, dtrain, num_round, watchlist)
 
 print ('start testing prediction from first n trees')
@@ -73,11 +73,11 @@ print ('error of ypred1=%f' % (np.sum((ypred1>0.5)!=label) /float(len(label))))
 print ('error of ypred2=%f' % (np.sum((ypred2>0.5)!=label) /float(len(label))))
 
 roc = metrics.roc_auc_score(y_val, ypred1)
-print("ROC, ypred1: ", roc)
+print("ROC, ypred1: %.6f"%roc)
 roc = metrics.roc_auc_score(y_val, ypred2)
-print("ROC, ypred2: ", roc)
+print("ROC, ypred2: %.6f"%roc)
 roc = metrics.roc_auc_score(y_val, np.mean([ypred1,ypred2],0))
-print("ROC, averaged ypreds: ", roc)
+print("ROC, averaged ypreds: %.6f"%roc)
 cc = np.corrcoef([ypred1,ypred2])
 print(cc)
 """

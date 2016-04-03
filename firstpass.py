@@ -58,8 +58,8 @@ model.add(Dropout(0.5))
 model.add(Dense(64, init='he_normal',input_dim=128))
 model.add(PReLU())
 model.add(Dropout(0.5))
-model.add(Dense(2, init='he_normal',input_dim=64))
-model.add(Activation('softmax')) # classification softmax, regression tanh or sigmoid
+model.add(Dense(1, init='he_normal',input_dim=64))
+model.add(Activation('sigmoid')) # classification softmax, regression tanh or sigmoid
 
 # Stochastic gradient descent to train
 sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
@@ -68,13 +68,13 @@ sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
 model.compile(loss='binary_crossentropy', optimizer='adadelta')
 
 # Fit the model. Training on small number of epochs to start with.
-f = model.fit(X_train, y_train, nb_epoch=100, shuffle=True,
+f = model.fit(preprocessing.scale(X_train.values), preprocessing.scale(y_train.values), nb_epoch=25, shuffle=True,
 	batch_size=128, validation_split=0.15,
-	show_accuracy=True, verbose=1)
+	show_accuracy=True, verbose=0)
 
 print("Making predictions on validation set")
 # Make predictions on validation data
-valid_preds = model.predict_proba(X_val, verbose=0)
+valid_preds = model.predict(preprocessing.scale(X_val.values), verbose=0)
 
 # Take max value in preds rows as classification
 pred = np.zeros((len(valid_preds)))
