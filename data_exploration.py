@@ -6,6 +6,7 @@ Ryan Gooch, Apr 2016
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 import keras
 import theano
 
@@ -22,6 +23,13 @@ trainpath = '/media/ryan/Charlemagne/kaggle/santander-kaggle/train.csv'
 testpath = '/media/ryan/Charlemagne/kaggle/santander-kaggle/test.csv'
 df_train, df_test = getdata(trainpath,testpath)
 
+rs = 19683
+
+"""
+Feature Selection 
+"""
+
+
 from sklearn.svm import LinearSVC
 from sklearn.datasets import load_iris
 from sklearn.feature_selection import SelectFromModel
@@ -29,7 +37,7 @@ y = df_train['TARGET']
 X = df_train.drop(['ID','TARGET'], axis=1)
 print(X.shape)
 
-lsvc = LinearSVC(C=0.01, penalty="l1", dual=False).fit(X, y)
+lsvc = LinearSVC(C=0.01, penalty="l1", dual=False, random_state = rs).fit(X, y)
 model = SelectFromModel(lsvc, prefit=True)
 X_new = model.transform(X)
 print(X_new.shape)
@@ -42,71 +50,29 @@ X_test = model.transform(X_test)
 L1-SVM dropped features from 307 to 65. Pretty steep
 """
 
+# Store in dataframe, loop through and categorize all remaining features
+df_new = pd.DataFrame(X_new)
+df_new_test = pd.DataFrame(X_test)
+labels = np.arange(0,100)
+for k in df_new.columns :
+	if np.var(df_new_test[k]) > 0 :
+		df_new_test[str(k)+'_new'] = pd.cut(df_new_test[k], \
+			100, include_lowest = True,labels=labels)
+		df_new_test = df_new_test.drop(k,axis=1)
+
+		df_new[str(k)+'_new'] = pd.cut(df_new[k], \
+			100, include_lowest = True,labels=labels)
+		df_new = df_new.drop(k,axis=1)
+	else :
+		df_new_test = df_new_test.drop(k,axis=1)
+		df_new = df_new.drop(k,axis=1)
+
 # Standardize, ignore numerical warning for now
-X = preprocessing.scale(X_new)
-X_test = preprocessing.scale(X_test)
+X = preprocessing.scale(df_new)
+X_test = preprocessing.scale(df_new_test)
 
 # Random state for repeatability, split into training and validation sets
 rs = 19683
 X_train, X_val, y_train, y_val = \
 		cross_validation.train_test_split(X, y, \
 			test_size=0.25, random_state=rs)
-
-import xgboost as xgb
-
-### load data in do training
-dtrain = xgb.DMatrix(X_train,label=y_train)
-dtest = xgb.DMatrix(X_val,label=y_val)
-param = {'max_depth':8, 'eta':1, 'silent':1, 'objective':'binary:logistic' }
-watchlist  = [(dtest,'eval'), (dtrain,'train')]
-num_round = 3
-bst = xgb.train(param, dtrain, num_round, watchlist)
-
-print ('start testing prediction from first n trees')
-### predict using first 1 tree
-label = y_val
-ypred1 = bst.predict(dtest, ntree_limit=1)
-# by default, we predict using all the trees
-ypred2 = bst.predict(dtest)
-print ('error of ypred1=%f' % (np.sum((ypred1>0.5)!=label) /float(len(label))))
-print ('error of ypred2=%f' % (np.sum((ypred2>0.5)!=label) /float(len(label))))
-
-roc = metrics.roc_auc_score(y_val, ypred1)
-print("ROC, ypred1: ", roc)
-roc = metrics.roc_auc_score(y_val, ypred2)
-print("ROC, ypred2: ", roc)
-roc = metrics.roc_auc_score(y_val, np.mean([ypred1,ypred2],0))
-print("ROC, averaged ypreds: ", roc)
-
-"""
-('ROC, ypred1: ', 0.7829)
-('ROC, ypred2: ', 0.8008)
-
-So, this is good. Highly correlated, so just use ypred2 if in ensemble
-"""
-
-"""
-('ROC, ypred1: ', 0.7902)
-('ROC, ypred2: ', 0.8103)
-('ROC, ypreds: ', 0.8115) <----> Kaggle Test set ROC: 0.8121, val = consistent
-
-for first 8 trees. Also these two are uncorrelated! Go ahead and make a 
-submission because why not.
-"""
-
- # Make predictions on test set
-### load data in do training
-dtrain = xgb.DMatrix(X,label=y)
-dtest = xgb.DMatrix(X_test)
-param = {'max_depth':8, 'eta':1, 'silent':1, 'objective':'binary:logistic' }
-watchlist  = [(dtrain,'train')]
-num_round = 3
-bst = xgb.train(param, dtrain, num_round)
-
-print ('start testing prediction from first n trees')
-### predict using first 1 tree
-ypred1 = bst.predict(dtest, ntree_limit=1)
-# by default, we predict using all the trees
-ypred2 = bst.predict(dtest)
-
-writesub(X_IDs, np.mean([ypred1,ypred2],0), sub = "XGB.3round.2ensemble.2016.04.01.csv")
